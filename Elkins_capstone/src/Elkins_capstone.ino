@@ -5,7 +5,6 @@
  * Date: 9/11/2020
  */
 
-// setup() runs once, when the device is first turned on.
 
 #include "Adafruit_GFX.h"
 #include "Adafruit_SSD1306.h"
@@ -14,6 +13,7 @@
 #include "Adafruit_MQTT/Adafruit_MQTT.h" 
 #include "Adafruit_MQTT/Adafruit_MQTT_SPARK.h" 
 #include "DHT22Gen3_RK.h"
+#include "SparkFun_Qwiic_Twist_Arduino_Library.h"
 #include "Apikey.h"
 
 
@@ -31,6 +31,7 @@ TCPClient TheClient;
 Adafruit_MQTT_SPARK mqtt(&TheClient,AIO_SERVER,AIO_SERVERPORT,AIO_USERNAME,AIO_KEY);
 
 Adafruit_MQTT_Subscribe activate = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/activate"); 
+Adafruit_MQTT_Subscribe turnon = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/turnon");
 
 int last;
 int waterlevel; //Waterlevel sensor input
@@ -43,6 +44,7 @@ void setup() {
   pinMode(relay2, OUTPUT);
   pinMode(relay3, OUTPUT);
   MQTT_connect();
+  begin();
 
 
 }
@@ -52,6 +54,9 @@ void loop() {
   digitalWrite(relay2, HIGH);
   digitalWrite(relay3, HIGH);
   ping();
+  display.clearDisplay();
+  display.println("hello world");
+  display.display();
   
 
 }
@@ -62,6 +67,14 @@ void onoff() {
 
 void climateread() {
 
+}
+
+void begin() {
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.setTextColor(WHITE);
+  bme.begin();
+  display.display();
+  delay(750);
 }
 
 void MQTT_connect() { //connection to adafruit.io
