@@ -13,8 +13,8 @@
 #include <Adafruit_MQTT.h>
 #include "Adafruit_MQTT/Adafruit_MQTT.h" 
 #include "Adafruit_MQTT/Adafruit_MQTT_SPARK.h" 
+#include "DHT22Gen3_RK.h"
 #include "Apikey.h"
-
 
 
 #define BME280_ADDRESS  (0x77)
@@ -23,21 +23,48 @@ Adafruit_SSD1306 display(OLED_RESET);
 Adafruit_BME280 bme;
 
 #define AIO_SERVER      "io.adafruit.com" 
-#define AIO_SERVERPORT  1883   
+#define AIO_SERVERPORT  1883 
+//this is a github test  
 
+
+TCPClient TheClient; 
+Adafruit_MQTT_SPARK mqtt(&TheClient,AIO_SERVER,AIO_SERVERPORT,AIO_USERNAME,AIO_KEY);
+
+Adafruit_MQTT_Subscribe activate = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/activate"); 
+
+int last;
+int waterlevel; //Waterlevel sensor input
+int relay1 = D2, relay2 = D3, relay3 = D4; //sets up the relays for each tec
+int pushbutton = D9;
 
 void setup() {
-  // Put initialization like pinMode and begin functions here.
+  pinMode(A0, INPUT);
+  pinMode(relay1, OUTPUT);
+  pinMode(relay2, OUTPUT);
+  pinMode(relay3, OUTPUT);
   MQTT_connect();
+
+
 }
 
-// loop() runs over and over again, as quickly as it can execute.
 void loop() {
-  // The core of your code will likely live here.
+  digitalWrite(relay1, HIGH);
+  digitalWrite(relay2, HIGH);
+  digitalWrite(relay3, HIGH);
+  ping();
+  
 
 }
 
-void MQTT_connect() {
+void onoff() { 
+
+}
+
+void climateread() {
+
+}
+
+void MQTT_connect() { //connection to adafruit.io
   int8_t ret;
  
  
@@ -54,4 +81,16 @@ void MQTT_connect() {
        delay(5000);  
   }
   Serial.println("MQTT Connected!");
+}
+
+void ping() {  //pings adafruit.io to make sure  connection is active
+   if ((millis()-last)>30000) {
+      Serial.printf("Pinging MQTT \n");
+      
+      if(! mqtt.ping()) {
+        Serial.printf("Disconnecting \n");
+        mqtt.disconnect();
+      }
+      last = millis();
+  }
 }
