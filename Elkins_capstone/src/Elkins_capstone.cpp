@@ -27,9 +27,8 @@ void setup();
 void loop();
 void onoff();
 void climateread();
-void begin();
 void MQTT_connect();
-void ping();
+void ping1();
 #line 20 "c:/Users/Nick/Desktop/Iot/Capstone/Elkins_capstone/src/Elkins_capstone.ino"
 #define BME280_ADDRESS  (0x77)
 #define OLED_RESET D4
@@ -51,45 +50,51 @@ int last;
 int waterlevel; //Waterlevel sensor input
 int relay1 = D2, relay2 = D3, relay3 = D4; //sets up the relays for each tec
 int pushbutton = D9;
+bool status = false;
 
 void setup() {
   pinMode(A0, INPUT);
   pinMode(relay1, OUTPUT);
   pinMode(relay2, OUTPUT);
   pinMode(relay3, OUTPUT);
+   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.setTextColor(WHITE);
+  bme.begin();
+  display.display();
+  delay(750);
+  
   MQTT_connect();
-  begin();
+  
 
 
 }
 
 void loop() {
-  digitalWrite(relay1, HIGH);
-  digitalWrite(relay2, HIGH);
-  digitalWrite(relay3, HIGH);
-  ping();
+  ping1(); // calls on the mqtt ping to keep active connection to adafruit
+  onoff();
   display.clearDisplay();
   display.println("hello world");
+  display.setCursor(0,0);
   display.display();
   
 
 }
 
 void onoff() { 
+  if (status == false) {
+    digitalWrite(relay1,LOW);
+    digitalWrite(relay2,LOW);
+    digitalWrite(relay3,LOW);
+  }
 
 }
 
 void climateread() {
 
+
 }
 
-void begin() {
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  display.setTextColor(WHITE);
-  bme.begin();
-  display.display();
-  delay(750);
-}
+
 
 void MQTT_connect() { //connection to adafruit.io
   int8_t ret;
@@ -110,7 +115,7 @@ void MQTT_connect() { //connection to adafruit.io
   Serial.println("MQTT Connected!");
 }
 
-void ping() {  //pings adafruit.io to make sure  connection is active
+void ping1() {  //pings adafruit.io to make sure  connection is active
    if ((millis()-last)>30000) {
       Serial.printf("Pinging MQTT \n");
       
