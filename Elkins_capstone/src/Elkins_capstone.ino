@@ -32,11 +32,15 @@ Adafruit_MQTT_SPARK mqtt(&TheClient,AIO_SERVER,AIO_SERVERPORT,AIO_USERNAME,AIO_K
 
 Adafruit_MQTT_Subscribe activate = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/activate"); 
 Adafruit_MQTT_Subscribe turnon = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/turnon");
+Adafruit_MQTT_Publish insidetemp = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/insidetemp");
 
-int last;
+unsigned long last;
+unsigned long lastTime;
 int waterlevel; //Waterlevel sensor input
 int relay1 = D2, relay2 = D3, relay3 = D4; //sets up the relays for each tec
 int pushbutton = D9;
+int intemp;    //Temperature for the inside -- bme280
+int totalstate; // This is the integer to show what the current state of the unit is
 bool status = false;
 
 void setup() {
@@ -51,6 +55,7 @@ void setup() {
   delay(750);
   
   MQTT_connect();
+  mqtt.subscribe(&turnon);
   
 
 
@@ -59,11 +64,20 @@ void setup() {
 void loop() {
   ping1(); // calls on the mqtt ping to keep active connection to adafruit
   onoff();
+  climateread();
   display.clearDisplay();
-  display.println("hello world");
+  display.println(totalstate);
   display.setCursor(0,0);
   display.display();
   
+
+   Adafruit_MQTT_Subscribe *subscription;
+  while ((subscription = mqtt.readSubscription(4000))) {
+    if (subscription == &turnon) {
+     totalstate = atof((char *)turnon.lastread);
+     Serial.println(totalstate);
+    }
+  }
 
 }
 
@@ -74,10 +88,20 @@ void onoff() {
     digitalWrite(relay3,LOW);
   }
 
+ 
+
+   if((millis()-lastTime > 10000)) {
+      if(mqtt.Update()) {
+
+        insidetemp.publish(intemp);
+        } 
+      lastTime = millis();
+    }
+
 }
 
 void climateread() {
-
+  intemp = bme.readTemperature();
 
 }
 
