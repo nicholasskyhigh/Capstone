@@ -25,7 +25,6 @@
 
 void setup();
 void loop();
-void onoff();
 void climateread();
 void MQTT_connect();
 void ping1();
@@ -76,7 +75,10 @@ void setup() {
 
 void loop() {
   ping1(); // calls on the mqtt ping to keep active connection to adafruit
-  onoff();
+  //onoff();
+  digitalWrite(relay1, HIGH);
+  digitalWrite(relay2,HIGH);
+  digitalWrite(relay3,HIGH);
   climateread();
   display.clearDisplay();
   display.println(totalstate);
@@ -92,14 +94,14 @@ void loop() {
     }
   }
 
-}
 
-void onoff() { 
-  if (status == false) {
-    digitalWrite(relay1,LOW);
-    digitalWrite(relay2,LOW);
-    digitalWrite(relay3,LOW);
-  }
+
+// void onoff() {      //for when more of the project is working.
+//   if (status == false) {
+//     digitalWrite(relay1,LOW);
+//     digitalWrite(relay2,LOW);
+//     digitalWrite(relay3,LOW);
+//   }
 
  
 
