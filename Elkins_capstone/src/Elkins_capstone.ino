@@ -21,6 +21,7 @@
 #define OLED_RESET D4
 Adafruit_SSD1306 display(OLED_RESET);
 Adafruit_BME280 bme;
+TWIST twist;
 
 #define AIO_SERVER      "io.adafruit.com" 
 #define AIO_SERVERPORT  1883 
@@ -33,6 +34,7 @@ Adafruit_MQTT_SPARK mqtt(&TheClient,AIO_SERVER,AIO_SERVERPORT,AIO_USERNAME,AIO_K
 Adafruit_MQTT_Subscribe activate = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/activate"); 
 Adafruit_MQTT_Subscribe turnon = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/turnon");
 Adafruit_MQTT_Publish insidetemp = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/insidetemp");
+Adafruit_MQTT_Publish outsidetemp = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/outsidetemp");
 
 unsigned long last;
 unsigned long lastTime;
@@ -40,71 +42,116 @@ int waterlevel; //Waterlevel sensor input
 int relay1 = D2, relay2 = D3, relay3 = D4; //sets up the relays for each tec
 int pushbutton = D9;
 int intemp;    //Temperature for the inside -- bme280
-int totalstate; // This is the integer to show what the current state of the unit is
+int outemp;   //Temperature for the outside -- bme 280 ran through the teensy
+int totalstate; // This is the integer to set what the current state of the unit is
+int outbme = A5;
+int temperatureset = 70;
 bool status = false;
+bool geostatus = false;
 
 void setup() {
   pinMode(A0, INPUT);
   pinMode(relay1, OUTPUT);
   pinMode(relay2, OUTPUT);
   pinMode(relay3, OUTPUT);
-   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  pinMode(pushbutton, INPUT);
+  pinMode(outbme, INPUT);
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   display.setTextColor(WHITE);
   bme.begin();
+  if(twist.begin() == false) {}
+    Serial.println("Twist does not appear to be connected. Please check wiring. Freezing...");
+    while(1);
+  }
   display.display();
   delay(750);
-  
   MQTT_connect();
   mqtt.subscribe(&turnon);
-  
+  digitalWrite(relay1, LOW);
+  digitalWrite(relay2, LOW);
+  digitalWrite(relay3, LOW);
 
 
 }
 
 void loop() {
   ping1(); // calls on the mqtt ping to keep active connection to adafruit
-  //onoff();
-  digitalWrite(relay1, HIGH);
-  digitalWrite(relay2,HIGH);
-  digitalWrite(relay3,HIGH);
+  onoff();
+  SHOW();
   climateread();
-  display.clearDisplay();
-  display.println(totalstate);
-  display.setCursor(0,0);
-  display.display();
+  statuscheck();
+  tempset();
   
-
    Adafruit_MQTT_Subscribe *subscription;
   while ((subscription = mqtt.readSubscription(4000))) {
     if (subscription == &turnon) {
      totalstate = atof((char *)turnon.lastread);
-     Serial.println(totalstate);
+    }
+    if (subscription == &activate) {
+
     }
   }
-
-
-
-// void onoff() {      //for when more of the project is working.
-//   if (status == false) {
-//     digitalWrite(relay1,LOW);
-//     digitalWrite(relay2,LOW);
-//     digitalWrite(relay3,LOW);
-//   }
-
- 
-
-   if((millis()-lastTime > 10000)) {
+     if((millis()-lastTime > 10000)) {
       if(mqtt.Update()) {
 
         insidetemp.publish(intemp);
+        outsidetemp.publish(outemp);
         } 
       lastTime = millis();
     }
 
 }
 
+
+void statuscheck() {
+  if (pushbutton == HIGH) {
+    status = !status;
+  }
+  if ((geostatus == true) && (status == true)) {
+    digitalWrite(relay1, HIGH);
+    digitalWrite(relay2, HIGH);
+    digitalWrite(relay3, LOW);
+  }
+}
+
+void SHOW() {
+  display.clearDisplay();
+  display.setCursor(0,0);
+  display.println("Status: ");
+  display.print(status);
+  display.println("Inside temp: ");
+  display.print(intemp);
+  display.println("Outside temp: ");
+  display.print(outemp);
+}
+
+
+
+void onoff() {      //for when more of the project is working.
+   if (status == false) {
+    digitalWrite(relay1,LOW);
+    digitalWrite(relay2,LOW);
+    digitalWrite(relay3,LOW);
+   }
+   else { 
+    digitalWrite(relay1,HIGH);
+    digitalWrite(relay2,HIGH);
+    digitalWrite(relay3,HIGH);
+
+   }
+}
+
+ 
+void tempset() {
+  if (temperatureset > intemp) {
+    status = !status;
+  }
+}
+
+
 void climateread() {
   intemp = bme.readTemperature();
+  outemp = analogRead(outbme);
 
 }
 
